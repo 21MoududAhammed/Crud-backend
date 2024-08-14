@@ -47,6 +47,58 @@ async function run() {
       res.send(result);
     });
 
+    // get a book details
+    app.get("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await booksCollection.findOne(query);
+      res.send(result);
+    });
+
+    // update a book details
+    app.put("/books/:id", async (req, res) => {
+      const id = req.params.id;
+      const bookDetails = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedBookDetails = {
+        $set: {
+          ...bookDetails,
+        },
+      };
+      try {
+        const result = await booksCollection.updateOne(
+          filter,
+          updatedBookDetails,
+          options
+        );
+
+        if (result.modifiedCount > 0) {
+          res.send({
+            success: true,
+            message: "Book updated successfully",
+            result,
+          });
+        } else if (result.upsertedCount > 0) {
+          res.send({
+            success: true,
+            message: "Book not found, but a new book was created",
+            result,
+          });
+        } else {
+          res.status(404).send({ success: false, message: "Book not found" });
+        }
+      } catch (error) {
+        res
+          .status(500)
+          .send({
+            success: false,
+            message: "An error occurred",
+            error: error.message,
+          });
+      }
+    });
+
     // delete a book
     app.delete("/books/:id", async (req, res) => {
       const id = req.params.id;
