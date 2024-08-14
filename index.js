@@ -1,6 +1,7 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 
@@ -14,8 +15,7 @@ app.get("/", (req, res) => {
   res.send("This is backend for crud operation.");
 });
 
-const uri =
-  "mongodb+srv://moududfkpirisda:wIl8MZZFd7hJfyKC@cluster0.eukaa.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const uri = process.env.MONGODB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -33,40 +33,68 @@ async function run() {
 
     const booksCollection = client.db("booksDB").collection("books");
 
-    //post or insert a book details
+    // POST or insert a book's details
     app.post("/books", async (req, res) => {
-      const bookDetails = req.body;
-      //   console.log(JSON.stringify(book))
-      const result = await booksCollection.insertOne(bookDetails);
-      res.send(result);
-    });
-    //    get all books details
-    app.get("/books", async (req, res) => {
-      const cursor = booksCollection.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    });
-
-    // get a book details
-    app.get("/books/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await booksCollection.findOne(query);
-      res.send(result);
-    });
-
-    // update a book details
-    app.put("/books/:id", async (req, res) => {
-      const id = req.params.id;
-      const bookDetails = req.body;
-      const filter = { _id: new ObjectId(id) };
-      const options = { upsert: true };
-      const updatedBookDetails = {
-        $set: {
-          ...bookDetails,
-        },
-      };
       try {
+        const bookDetails = req.body;
+        const result = await booksCollection.insertOne(bookDetails);
+        res.status(201).send(result); // Respond with 201 status code for creation
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to add book",
+          error: error.message,
+        });
+      }
+    });
+
+    // GET all book details
+    app.get("/books", async (req, res) => {
+      try {
+        const cursor = booksCollection.find();
+        const result = await cursor.toArray();
+        res.status(200).send(result);
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch books",
+          error: error.message,
+        });
+      }
+    });
+
+    // GET a book's details by ID
+    app.get("/books/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await booksCollection.findOne(query);
+
+        if (result) {
+          res.status(200).send(result);
+        } else {
+          res.status(404).send({ success: false, message: "Book not found" });
+        }
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to fetch the book",
+          error: error.message,
+        });
+      }
+    });
+
+    // PUT or update a book's details
+    app.put("/books/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const bookDetails = req.body;
+        const filter = { _id: new ObjectId(id) };
+        const options = { upsert: true };
+        const updatedBookDetails = {
+          $set: { ...bookDetails },
+        };
+
         const result = await booksCollection.updateOne(
           filter,
           updatedBookDetails,
@@ -89,22 +117,36 @@ async function run() {
           res.status(404).send({ success: false, message: "Book not found" });
         }
       } catch (error) {
-        res
-          .status(500)
-          .send({
-            success: false,
-            message: "An error occurred",
-            error: error.message,
-          });
+        res.status(500).send({
+          success: false,
+          message: "Failed to update the book",
+          error: error.message,
+        });
       }
     });
 
-    // delete a book
+    // DELETE a book by ID
     app.delete("/books/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await booksCollection.deleteOne(query);
-      res.send(result);
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await booksCollection.deleteOne(query);
+
+        if (result.deletedCount > 0) {
+          res.send({
+            success: true,
+            message: "Book deleted successfully",
+          });
+        } else {
+          res.status(404).send({ success: false, message: "Book not found" });
+        }
+      } catch (error) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to delete the book",
+          error: error.message,
+        });
+      }
     });
 
     // Send a ping to confirm a successful connection
