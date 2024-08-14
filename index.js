@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(cors());
 
 app.get("/", (req, res) => {
-  res.send("This is backend for crud operation.");
+  res.send("This is backend server for crud operation.");
 });
 
 const uri = process.env.MONGODB_URI;
